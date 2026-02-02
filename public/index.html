@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vinyl Record Search</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Vinyl Record Search</h1>
+      <p>Upload a CSV with artist names to search vinyl marketplaces</p>
+    </header>
+
+    <main>
+      <section id="tokenNotice" class="token-notice hidden">
+        For individual album listings from Discogs, set DISCOGS_TOKEN in .env
+        <a href="https://www.discogs.com/settings/developers" target="_blank">Get free token</a>
+      </section>
+
+      <section class="quick-add-section">
+        <form id="quickAddForm">
+          <div id="artistInputs">
+            <div class="artist-input-row">
+              <input type="text" class="artist-input" placeholder="Artist name..." autocomplete="off">
+              <button type="button" class="remove-artist-btn" title="Remove">&times;</button>
+            </div>
+          </div>
+          <div class="quick-add-buttons">
+            <button type="button" id="addMoreBtn" title="Add another artist">+ Add Another</button>
+            <button type="submit" id="quickAddBtn">Search Artists</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="upload-section">
+        <form id="uploadForm">
+          <div class="file-input-wrapper">
+            <input type="file" id="csvFile" accept=".csv,.txt" required>
+            <label for="csvFile">
+              <span class="file-icon">+</span>
+              <span class="file-text">Choose CSV file</span>
+            </label>
+          </div>
+          <p class="file-hint">CSV should have an "artist" column, or one artist name per line</p>
+          <div class="upload-mode">
+            <label><input type="radio" name="uploadMode" value="replace" checked> Replace existing list</label>
+            <label><input type="radio" name="uploadMode" value="append"> Add to existing list</label>
+          </div>
+          <button type="submit" id="searchBtn" disabled>Search Marketplaces</button>
+        </form>
+      </section>
+
+      <section id="loadingSection" class="loading-section hidden">
+        <div class="spinner"></div>
+        <p>Searching marketplaces... <span id="searchProgress"></span></p>
+      </section>
+
+      <section id="resultsSection" class="results-section hidden">
+        <div class="results-header">
+          <h2>Results <span id="resultCount"></span></h2>
+          <div class="filter-controls">
+            <span class="filter-label">Price:</span>
+            <button type="button" class="filter-btn active" data-filter="all">All</button>
+            <button type="button" class="filter-btn" data-filter="15">Under $15</button>
+            <button type="button" class="filter-btn" data-filter="25">Under $25</button>
+          </div>
+          <div class="sort-controls">
+            <label for="sortBy">Sort by:</label>
+            <select id="sortBy">
+              <option value="artist">Artist</option>
+              <option value="album">Album</option>
+              <option value="source">Source</option>
+              <option value="price">Price</option>
+            </select>
+          </div>
+        </div>
+        <div class="table-wrapper">
+          <table id="resultsTable">
+            <thead>
+              <tr>
+                <th>Artist</th>
+                <th>Album</th>
+                <th>Year</th>
+                <th>Price</th>
+                <th>Shipping</th>
+                <th>Total</th>
+                <th>Condition</th>
+                <th>Source</th>
+                <th>Link</th>
+              </tr>
+            </thead>
+            <tbody id="resultsBody">
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="errorSection" class="error-section hidden">
+        <p id="errorMessage"></p>
+      </section>
+    </main>
+
+    <footer>
+      <p>Searches Discogs, eBay, Amazon, and more</p>
+    </footer>
+  </div>
+
+  <script src="app.js?v=4"></script>
+</body>
+</html>
