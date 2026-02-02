@@ -61,7 +61,11 @@
 
       <section id="loadingSection" class="loading-section hidden">
         <div class="spinner"></div>
-        <p>Searching marketplaces... <span id="searchProgress"></span></p>
+        <p id="progressText">Searching marketplaces...</p>
+        <div class="progress-bar-container">
+          <div class="progress-bar" id="progressBar"></div>
+        </div>
+        <p id="progressDetail" class="progress-detail"></p>
       </section>
 
       <section id="resultsSection" class="results-section hidden">

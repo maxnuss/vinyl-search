@@ -76,18 +76,29 @@ function parseArtists(csvContent) {
   return records.map(r => r[artistKey]).filter(Boolean);
 }
 
-// Search endpoint
+// Search endpoint with SSE for progress
 app.post('/api/search', upload.single('csv'), async (req, res) => {
+  // Set up SSE
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+
+  const sendProgress = (data) => {
+    res.write(`data: ${JSON.stringify(data)}\n\n`);
+  };
+
   try {
     if (!req.file) {
-      return res.status(400).json({ error: 'No CSV file uploaded' });
+      sendProgress({ error: 'No CSV file uploaded' });
+      return res.end();
     }
 
     const newArtists = parseArtists(req.file.buffer.toString());
     const mode = req.body.mode || 'replace';
 
     if (newArtists.length === 0) {
-      return res.status(400).json({ error: 'No artists found in CSV' });
+      sendProgress({ error: 'No artists found in CSV' });
+      return res.end();
     }
 
     // Load existing data if appending
@@ -112,21 +123,40 @@ app.post('/api/search', upload.single('csv'), async (req, res) => {
     console.log(`Mode: ${mode}, Searching for ${artistsToSearch.length} new artists:`, artistsToSearch);
 
     const newResults = [];
+    const totalArtists = artistsToSearch.length;
 
-    for (const artist of artistsToSearch) {
+    for (let i = 0; i < artistsToSearch.length; i++) {
+      const artist = artistsToSearch[i];
       console.log(`Searching for: ${artist}`);
+
+      // Send progress update
+      sendProgress({
+        type: 'progress',
+        artist,
+        current: i + 1,
+        total: totalArtists,
+        step: 'discogs'
+      });
 
       // Search Discogs first
       const discogsResults = await searchDiscogs(artist);
       newResults.push(...discogsResults);
 
+      sendProgress({ type: 'progress', artist, current: i + 1, total: totalArtists, step: 'ebay' });
+
       // Search eBay
       const ebayResults = await searchEbay(artist);
       newResults.push(...ebayResults);
 
+      sendProgress({ type: 'progress', artist, current: i + 1, total: totalArtists, step: 'web' });
+
       // Add web search results
       const webResults = await searchWeb(artist);
       newResults.push(...webResults);
+
+      // Send partial results for this artist
+      const artistResults = [...discogsResults, ...ebayResults, ...webResults];
+      sendProgress({ type: 'results', artist, results: artistResults });
 
       // Small delay between artists to respect rate limits
       await new Promise(resolve => setTimeout(resolve, 150));
@@ -143,20 +173,33 @@ app.post('/api/search', upload.single('csv'), async (req, res) => {
     // Save results for next time
     saveLastResults(allResults, allArtists);
 
-    res.json({ results: allResults, artists: allArtists });
+    // Send final results
+    sendProgress({ type: 'complete', results: allResults, artists: allArtists });
+    res.end();
   } catch (error) {
     console.error('Search error:', error);
-    res.status(500).json({ error: 'Search failed: ' + error.message });
+    sendProgress({ error: 'Search failed: ' + error.message });
+    res.end();
   }
 });
 
-// Add multiple artists endpoint
+// Add multiple artists endpoint with SSE for progress
 app.post('/api/search/artists', async (req, res) => {
+  // Set up SSE
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+
+  const sendProgress = (data) => {
+    res.write(`data: ${JSON.stringify(data)}\n\n`);
+  };
+
   try {
     const { artists } = req.body;
 
     if (!artists || !Array.isArray(artists) || artists.length === 0) {
-      return res.status(400).json({ error: 'Artists array required' });
+      sendProgress({ error: 'Artists array required' });
+      return res.end();
     }
 
     // Load existing data
@@ -172,27 +215,40 @@ app.post('/api/search/artists', async (req, res) => {
       .filter(a => !existingArtistsLower.includes(a.toLowerCase()));
 
     if (newArtists.length === 0) {
-      return res.status(400).json({ error: 'All artists already in list' });
+      sendProgress({ error: 'All artists already in list' });
+      return res.end();
     }
 
     console.log(`Adding ${newArtists.length} artists:`, newArtists);
 
     const newResults = [];
+    const totalArtists = newArtists.length;
 
-    for (const artistName of newArtists) {
+    for (let i = 0; i < newArtists.length; i++) {
+      const artistName = newArtists[i];
       console.log(`Searching for: ${artistName}`);
+
+      sendProgress({ type: 'progress', artist: artistName, current: i + 1, total: totalArtists, step: 'discogs' });
 
       // Search Discogs
       const discogsResults = await searchDiscogs(artistName);
       newResults.push(...discogsResults);
 
+      sendProgress({ type: 'progress', artist: artistName, current: i + 1, total: totalArtists, step: 'ebay' });
+
       // Search eBay
       const ebayResults = await searchEbay(artistName);
       newResults.push(...ebayResults);
 
+      sendProgress({ type: 'progress', artist: artistName, current: i + 1, total: totalArtists, step: 'web' });
+
       // Search web
       const webResults = await searchWeb(artistName);
       newResults.push(...webResults);
+
+      // Send partial results for this artist
+      const artistResults = [...discogsResults, ...ebayResults, ...webResults];
+      sendProgress({ type: 'results', artist: artistName, results: artistResults });
 
       // Small delay between artists
       await new Promise(resolve => setTimeout(resolve, 150));
@@ -205,10 +261,12 @@ app.post('/api/search/artists', async (req, res) => {
     // Save
     saveLastResults(allResults, allArtists);
 
-    res.json({ results: allResults, artists: allArtists });
+    sendProgress({ type: 'complete', results: allResults, artists: allArtists });
+    res.end();
   } catch (error) {
     console.error('Artists search error:', error);
-    res.status(500).json({ error: 'Search failed: ' + error.message });
+    sendProgress({ error: 'Search failed: ' + error.message });
+    res.end();
   }
 });
 

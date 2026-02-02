@@ -85,6 +85,65 @@ artistInputs.addEventListener('click', (e) => {
   }
 });
 
+// Progress UI elements
+const progressText = document.getElementById('progressText');
+const progressBar = document.getElementById('progressBar');
+const progressDetail = document.getElementById('progressDetail');
+
+function updateProgress(data) {
+  if (data.type === 'progress') {
+    const percent = (data.current / data.total) * 100;
+    progressBar.style.width = `${percent}%`;
+    progressText.textContent = `Searching ${data.current} of ${data.total} artists...`;
+    const stepName = data.step === 'discogs' ? 'Discogs' : data.step === 'ebay' ? 'eBay' : 'Web';
+    progressDetail.textContent = `${data.artist} → ${stepName}`;
+  } else if (data.type === 'results') {
+    // Add new results to current results and display immediately
+    currentResults = [...currentResults, ...data.results];
+    applyFiltersAndDisplay();
+    // Show results section as soon as we have data
+    resultsSection.classList.remove('hidden');
+  }
+}
+
+function resetProgress(clearResults = true) {
+  progressBar.style.width = '0%';
+  progressText.textContent = 'Searching marketplaces...';
+  progressDetail.textContent = '';
+  if (clearResults) {
+    currentResults = [];
+  }
+}
+
+// Handle SSE search response
+async function handleSearchSSE(response, onComplete) {
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n\n');
+    buffer = lines.pop();
+
+    for (const line of lines) {
+      if (line.startsWith('data: ')) {
+        const data = JSON.parse(line.slice(6));
+        if (data.error) {
+          throw new Error(data.error);
+        } else if (data.type === 'complete') {
+          onComplete(data);
+        } else {
+          updateProgress(data);
+        }
+      }
+    }
+  }
+}
+
 // Handle quick add form
 quickAddForm.addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -102,6 +161,7 @@ quickAddForm.addEventListener('submit', async (e) => {
   errorSection.classList.add('hidden');
   quickAddBtn.disabled = true;
   addMoreBtn.disabled = true;
+  resetProgress(false); // Keep existing results since this endpoint appends
 
   try {
     const response = await fetch('/api/search/artists', {
@@ -110,25 +170,19 @@ quickAddForm.addEventListener('submit', async (e) => {
       body: JSON.stringify({ artists })
     });
 
-    const data = await response.json();
+    await handleSearchSSE(response, (data) => {
+      // Results already added incrementally, just finalize
+      loadingSection.classList.add('hidden');
+      resultsSection.classList.remove('hidden');
 
-    if (!response.ok) {
-      throw new Error(data.error || 'Search failed');
-    }
-
-    currentResults = data.results;
-    applyFiltersAndDisplay();
-
-    loadingSection.classList.add('hidden');
-    resultsSection.classList.remove('hidden');
-
-    // Clear inputs and reset to single input
-    artistInputs.innerHTML = `
-      <div class="artist-input-row">
-        <input type="text" class="artist-input" placeholder="Artist name..." autocomplete="off">
-        <button type="button" class="remove-artist-btn" title="Remove">&times;</button>
-      </div>
-    `;
+      // Clear inputs and reset to single input
+      artistInputs.innerHTML = `
+        <div class="artist-input-row">
+          <input type="text" class="artist-input" placeholder="Artist name..." autocomplete="off">
+          <button type="button" class="remove-artist-btn" title="Remove">&times;</button>
+        </div>
+      `;
+    });
   } catch (error) {
     loadingSection.classList.add('hidden');
     errorSection.classList.remove('hidden');
@@ -167,6 +221,7 @@ form.addEventListener('submit', async (e) => {
   resultsSection.classList.add('hidden');
   errorSection.classList.add('hidden');
   searchBtn.disabled = true;
+  resetProgress(uploadMode === 'replace'); // Only clear results if replacing
 
   try {
     const formData = new FormData();
@@ -178,17 +233,11 @@ form.addEventListener('submit', async (e) => {
       body: formData
     });
 
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.error || 'Search failed');
-    }
-
-    currentResults = data.results;
-    applyFiltersAndDisplay();
-
-    loadingSection.classList.add('hidden');
-    resultsSection.classList.remove('hidden');
+    await handleSearchSSE(response, (data) => {
+      // Results already added incrementally, just finalize
+      loadingSection.classList.add('hidden');
+      resultsSection.classList.remove('hidden');
+    });
   } catch (error) {
     loadingSection.classList.add('hidden');
     errorSection.classList.remove('hidden');
