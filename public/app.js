@@ -19,6 +19,11 @@ const quickAddBtn = document.getElementById('quickAddBtn');
 
 let currentResults = [];
 let currentPriceFilter = 'all';
+let currentSortColumn = 'artist';
+let currentSortDirection = 'asc';
+let currentSearchFilter = '';
+
+const searchFilter = document.getElementById('searchFilter');
 
 // Check if Discogs token is configured
 async function checkStatus() {
@@ -193,10 +198,41 @@ form.addEventListener('submit', async (e) => {
   }
 });
 
-// Handle sorting
+// Handle sorting from dropdown
 sortBy.addEventListener('change', () => {
+  currentSortColumn = sortBy.value;
+  currentSortDirection = 'asc';
+  updateSortIndicators();
   applyFiltersAndDisplay();
 });
+
+// Handle sorting from column headers
+document.querySelectorAll('th.sortable').forEach(th => {
+  th.addEventListener('click', () => {
+    const column = th.dataset.sort;
+    if (currentSortColumn === column) {
+      currentSortDirection = currentSortDirection === 'asc' ? 'desc' : 'asc';
+    } else {
+      currentSortColumn = column;
+      currentSortDirection = 'asc';
+    }
+    // Sync dropdown if column matches
+    if (sortBy.querySelector(`option[value="${column}"]`)) {
+      sortBy.value = column;
+    }
+    updateSortIndicators();
+    applyFiltersAndDisplay();
+  });
+});
+
+function updateSortIndicators() {
+  document.querySelectorAll('th.sortable').forEach(th => {
+    th.classList.remove('sort-asc', 'sort-desc');
+    if (th.dataset.sort === currentSortColumn) {
+      th.classList.add(currentSortDirection === 'asc' ? 'sort-asc' : 'sort-desc');
+    }
+  });
+}
 
 // Handle price filter buttons
 document.querySelectorAll('.filter-btn').forEach(btn => {
@@ -206,6 +242,12 @@ document.querySelectorAll('.filter-btn').forEach(btn => {
     currentPriceFilter = btn.dataset.filter;
     applyFiltersAndDisplay();
   });
+});
+
+// Handle search filter
+searchFilter.addEventListener('input', () => {
+  currentSearchFilter = searchFilter.value.toLowerCase();
+  applyFiltersAndDisplay();
 });
 
 function parsePrice(priceStr) {
@@ -226,15 +268,54 @@ function filterByPrice(results, maxPrice) {
 
 function applyFiltersAndDisplay() {
   let filtered = filterByPrice(currentResults, currentPriceFilter);
-  const sorted = sortResults(filtered, sortBy.value);
+  filtered = filterBySearch(filtered, currentSearchFilter);
+  const sorted = sortResults(filtered, currentSortColumn, currentSortDirection);
   displayResults(sorted);
 }
 
-function sortResults(results, key) {
+function filterBySearch(results, searchText) {
+  if (!searchText) return results;
+  return results.filter(r => {
+    const artist = (r.artist || '').toLowerCase();
+    const album = (r.album || '').toLowerCase();
+    return artist.includes(searchText) || album.includes(searchText);
+  });
+}
+
+function sortResults(results, key, direction) {
+  const numericColumns = ['price', 'shipping', 'total', 'year'];
+  const isNumeric = numericColumns.includes(key);
+
   return [...results].sort((a, b) => {
-    const aVal = (a[key] || '').toString().toLowerCase();
-    const bVal = (b[key] || '').toString().toLowerCase();
-    return aVal.localeCompare(bVal);
+    let aVal, bVal;
+
+    if (key === 'total') {
+      aVal = calculateTotal(a);
+      bVal = calculateTotal(b);
+    } else if (key === 'price' || key === 'shipping') {
+      aVal = parsePrice(a[key]);
+      bVal = parsePrice(b[key]);
+    } else if (key === 'year') {
+      aVal = parseInt(a[key]) || 0;
+      bVal = parseInt(b[key]) || 0;
+    } else {
+      aVal = (a[key] || '').toString().toLowerCase();
+      bVal = (b[key] || '').toString().toLowerCase();
+    }
+
+    // Handle nulls
+    if (aVal === null && bVal === null) return 0;
+    if (aVal === null) return 1;
+    if (bVal === null) return -1;
+
+    let result;
+    if (isNumeric) {
+      result = aVal - bVal;
+    } else {
+      result = aVal.localeCompare(bVal);
+    }
+
+    return direction === 'desc' ? -result : result;
   });
 }
 
@@ -249,6 +330,20 @@ function formatTotal(result) {
   const total = calculateTotal(result);
   if (total === null) return '-';
   return `$${total.toFixed(2)}`;
+}
+
+function formatPrice(priceStr) {
+  if (!priceStr || typeof priceStr !== 'string') return '-';
+  // Check if it's USD
+  if (priceStr.includes('USD') || priceStr.match(/^\$?\d/)) {
+    const match = priceStr.match(/[\d.]+/);
+    if (match) {
+      const num = parseFloat(match[0]);
+      return `$${num.toFixed(2)}`;
+    }
+  }
+  // Return non-USD prices as-is
+  return priceStr;
 }
 
 function displayResults(results) {
@@ -272,8 +367,8 @@ function displayResults(results) {
       <td>${escapeHtml(result.artist)}</td>
       <td>${escapeHtml(result.album)}</td>
       <td>${escapeHtml(result.year || '-')}</td>
-      <td>${escapeHtml(result.price)}</td>
-      <td>${escapeHtml(result.shipping || '-')}</td>
+      <td>${escapeHtml(formatPrice(result.price))}</td>
+      <td>${escapeHtml(formatPrice(result.shipping))}</td>
       <td>${escapeHtml(formatTotal(result))}</td>
       <td>${escapeHtml(result.condition || 'N/A')}</td>
       <td><span class="source-badge source-${result.source.toLowerCase().replace(/\s+/g, '')}">${escapeHtml(result.source)}</span></td>

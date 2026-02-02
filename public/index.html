@@ -3,15 +3,22 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Vinyl Record Search</title>
+  <title>Vinyl Search</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <div class="container">
     <header>
-      <h1>Vinyl Record Search</h1>
-      <p>Upload a CSV with artist names to search vinyl marketplaces</p>
-    </header>
+      <div class="logo">
+        <div class="vinyl-record">
+          <div class="vinyl-grooves"></div>
+          <div class="vinyl-label"></div>
+          <div class="vinyl-hole"></div>
+        </div>
+        <h1><img src="logo.svg" alt="Vinyl Search" class="logo-text"></h1>
+      </div>
+      </header>
 
     <main>
       <section id="tokenNotice" class="token-notice hidden">
@@ -60,6 +67,9 @@
       <section id="resultsSection" class="results-section hidden">
         <div class="results-header">
           <h2>Results <span id="resultCount"></span></h2>
+          <div class="search-filter">
+            <input type="text" id="searchFilter" placeholder="Filter by artist or album...">
+          </div>
           <div class="filter-controls">
             <span class="filter-label">Price:</span>
             <button type="button" class="filter-btn active" data-filter="all">All</button>
@@ -80,14 +90,14 @@
           <table id="resultsTable">
             <thead>
               <tr>
-                <th>Artist</th>
-                <th>Album</th>
-                <th>Year</th>
-                <th>Price</th>
-                <th>Shipping</th>
-                <th>Total</th>
-                <th>Condition</th>
-                <th>Source</th>
+                <th data-sort="artist" class="sortable">Artist</th>
+                <th data-sort="album" class="sortable">Album</th>
+                <th data-sort="year" class="sortable">Year</th>
+                <th data-sort="price" class="sortable">Price</th>
+                <th data-sort="shipping" class="sortable">Shipping</th>
+                <th data-sort="total" class="sortable">Total</th>
+                <th data-sort="condition" class="sortable">Condition</th>
+                <th data-sort="source" class="sortable">Source</th>
                 <th>Link</th>
               </tr>
             </thead>

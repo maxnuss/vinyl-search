@@ -129,7 +129,7 @@ app.post('/api/search', upload.single('csv'), async (req, res) => {
       newResults.push(...webResults);
 
       // Small delay between artists to respect rate limits
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise(resolve => setTimeout(resolve, 150));
     }
 
     // Combine results based on mode
@@ -195,7 +195,7 @@ app.post('/api/search/artists', async (req, res) => {
       newResults.push(...webResults);
 
       // Small delay between artists
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise(resolve => setTimeout(resolve, 150));
     }
 
     // Combine with existing

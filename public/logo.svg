@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 450 100">
+  <defs>
+    <!-- Classic WordArt rainbow gradient -->
+    <linearGradient id="rainbowGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#FF0000"/>
+      <stop offset="17%" style="stop-color:#FF8C00"/>
+      <stop offset="33%" style="stop-color:#FFD700"/>
+      <stop offset="50%" style="stop-color:#00CC00"/>
+      <stop offset="67%" style="stop-color:#0099FF"/>
+      <stop offset="83%" style="stop-color:#6633FF"/>
+      <stop offset="100%" style="stop-color:#CC00CC"/>
+    </linearGradient>
+
+    <!-- Metallic shine -->
+    <linearGradient id="shine" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:white;stop-opacity:0.8"/>
+      <stop offset="50%" style="stop-color:white;stop-opacity:0"/>
+      <stop offset="51%" style="stop-color:black;stop-opacity:0.1"/>
+      <stop offset="100%" style="stop-color:black;stop-opacity:0.3"/>
+    </linearGradient>
+  </defs>
+
+  <!-- 3D shadow layers -->
+  <text x="228" y="72" text-anchor="middle" font-family="Impact, Arial Black, sans-serif" font-size="58" font-weight="bold" fill="#333333">Vinyl Search</text>
+  <text x="227" y="71" text-anchor="middle" font-family="Impact, Arial Black, sans-serif" font-size="58" font-weight="bold" fill="#444444">Vinyl Search</text>
+  <text x="226" y="70" text-anchor="middle" font-family="Impact, Arial Black, sans-serif" font-size="58" font-weight="bold" fill="#555555">Vinyl Search</text>
+  <text x="225" y="69" text-anchor="middle" font-family="Impact, Arial Black, sans-serif" font-size="58" font-weight="bold" fill="#666666">Vinyl Search</text>
+
+  <!-- Black outline -->
+  <text x="224" y="68" text-anchor="middle" font-family="Impact, Arial Black, sans-serif" font-size="58" font-weight="bold" fill="none" stroke="#000000" stroke-width="6">Vinyl Search</text>
+
+  <!-- Rainbow fill -->
+  <text x="224" y="68" text-anchor="middle" font-family="Impact, Arial Black, sans-serif" font-size="58" font-weight="bold" fill="url(#rainbowGradient)">Vinyl Search</text>
+
+  <!-- Shine overlay -->
+  <text x="224" y="68" text-anchor="middle" font-family="Impact, Arial Black, sans-serif" font-size="58" font-weight="bold" fill="url(#shine)">Vinyl Search</text>
+</svg>
