@@ -12,6 +12,7 @@ const resultsBody = document.getElementById('resultsBody');
 const resultCount = document.getElementById('resultCount');
 const sortBy = document.getElementById('sortBy');
 const tokenNotice = document.getElementById('tokenNotice');
+const refreshBtn = document.getElementById('refreshBtn');
 const quickAddForm = document.getElementById('quickAddForm');
 const artistInputs = document.getElementById('artistInputs');
 const addMoreBtn = document.getElementById('addMoreBtn');
@@ -62,6 +63,29 @@ async function loadLastResults() {
 
 checkStatus();
 loadLastResults();
+
+// Handle refresh button
+refreshBtn.addEventListener('click', async () => {
+  loadingSection.classList.remove('hidden');
+  errorSection.classList.add('hidden');
+  refreshBtn.disabled = true;
+  resetProgress(true);
+
+  try {
+    const response = await fetch('/api/search/refresh', { method: 'POST' });
+
+    await handleSearchSSE(response, (data) => {
+      loadingSection.classList.add('hidden');
+      resultsSection.classList.remove('hidden');
+    });
+  } catch (error) {
+    loadingSection.classList.add('hidden');
+    errorSection.classList.remove('hidden');
+    document.getElementById('errorMessage').textContent = error.message;
+  } finally {
+    refreshBtn.disabled = false;
+  }
+});
 
 // Add more artist inputs
 addMoreBtn.addEventListener('click', () => {

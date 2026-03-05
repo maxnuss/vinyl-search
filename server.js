@@ -270,6 +270,59 @@ app.post('/api/search/artists', async (req, res) => {
   }
 });
 
+// Refresh all cached artists with fresh results
+app.post('/api/search/refresh', async (req, res) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+
+  const sendProgress = (data) => {
+    res.write(`data: ${JSON.stringify(data)}\n\n`);
+  };
+
+  try {
+    const existingData = loadLastResults();
+    if (!existingData || !existingData.artists || existingData.artists.length === 0) {
+      sendProgress({ error: 'No saved artists to refresh' });
+      return res.end();
+    }
+
+    const artists = existingData.artists;
+    console.log(`Refreshing ${artists.length} artists:`, artists);
+
+    const allResults = [];
+
+    for (let i = 0; i < artists.length; i++) {
+      const artist = artists[i];
+      console.log(`Refreshing: ${artist}`);
+
+      sendProgress({ type: 'progress', artist, current: i + 1, total: artists.length, step: 'discogs' });
+      const discogsResults = await searchDiscogs(artist);
+      allResults.push(...discogsResults);
+
+      sendProgress({ type: 'progress', artist, current: i + 1, total: artists.length, step: 'ebay' });
+      const ebayResults = await searchEbay(artist);
+      allResults.push(...ebayResults);
+
+      sendProgress({ type: 'progress', artist, current: i + 1, total: artists.length, step: 'web' });
+      const webResults = await searchWeb(artist);
+      allResults.push(...webResults);
+
+      sendProgress({ type: 'results', artist, results: [...discogsResults, ...ebayResults, ...webResults] });
+
+      await new Promise(resolve => setTimeout(resolve, 150));
+    }
+
+    saveLastResults(allResults, artists);
+    sendProgress({ type: 'complete', results: allResults, artists });
+    res.end();
+  } catch (error) {
+    console.error('Refresh error:', error);
+    sendProgress({ error: 'Refresh failed: ' + error.message });
+    res.end();
+  }
+});
+
 // Get last search results
 app.get('/api/results/latest', (req, res) => {
   const data = loadLastResults();
